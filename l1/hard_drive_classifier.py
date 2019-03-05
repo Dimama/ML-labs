@@ -1,10 +1,11 @@
 from random import shuffle
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.externals import joblib
+from sklearn.feature_selection import VarianceThreshold
 
 
 class HardDriveClassifier:
-    def __init__(self, data, classifier=None, k=0.8, classifier_file=None):
+    def __init__(self, data, classifier=None, k=0.8, classifier_file=None, optimize=True):
 
         if classifier is not None:
             self.classifier = classifier
@@ -13,8 +14,7 @@ class HardDriveClassifier:
             self.classifier = HardDriveClassifier._load_classifier(classifier_file)
             self.is_fitted = True
 
-        self._split_data(data, k)
-        self._get_additional_info(data)
+        self._load_data(data, k, optimize)
 
     def fit(self, save=False):
         self.classifier.fit(self.x_train, self.y_train)
@@ -43,29 +43,32 @@ class HardDriveClassifier:
 
     def _save_to_file(self, filename):
         if not self.is_fitted:
-            raise Exception("Classifies is not fitted yet!")
+            raise Exception("Classifier is not fitted yet!")
 
         joblib.dump(self.classifier, filename)
         print("Classifier saved to {}".format(filename))
 
-    def _split_data(self, data, k):
-        length = len(data["y"])
+    def _split_data(self, features, results, k):
+        length = len(results)
         index = int(length * k)
         indices = list(range(length))
         shuffle(indices)
 
-        x = [data["x"][i] for i in indices]
-        y = [data["y"][i] for i in indices]
+        x = [features[i] for i in indices]
+        y = [results[i] for i in indices]
 
         self.x_train, self.x_test = x[:index], x[index:]
         self.y_train, self.y_test = y[:index], y[index:]
 
-    @staticmethod
-    def _load_classifier(filename):
-        try:
-            return joblib.load(filename)
-        except FileNotFoundError:
-            raise Exception("File {} not found".format(filename))
+    def _load_data(self, data, k, optimize):
+        results = data["y"]
+        if optimize:
+            features = HardDriveClassifier._remove_zero_features(data["x"])
+        else:
+            features = data["x"]
+
+        self._split_data(features, results, k)
+        self._get_additional_info(data)
 
     def _get_additional_info(self, data):
         self.p_count = data["y"].count(1)
@@ -76,3 +79,19 @@ class HardDriveClassifier:
                                                                                      self.n_count + self.p_count,
                                                                                      self.n_count,
                                                                                      self.p_count)
+
+    @staticmethod
+    def _load_classifier(filename):
+        try:
+            return joblib.load(filename)
+        except FileNotFoundError:
+            raise Exception("File {} not found".format(filename))
+
+    @staticmethod
+    def _remove_zero_features(features, percent=.8):
+        sel = VarianceThreshold(threshold=percent)
+        new_features = sel.fit_transform(features)
+
+        print("Decrease features:", len(features[0]), '->', len(new_features[0]))
+
+        return new_features

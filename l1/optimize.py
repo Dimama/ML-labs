@@ -1,28 +1,26 @@
 import matplotlib.pyplot as plt
-from sklearn.neighbors  import KNeighborsClassifier
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import GridSearchCV
 
 from process_data import get_data_from_file
 
 
-def find_optimal_classifier_params(filename):
+def find_optimal_classifier_params(filename, cv=10):
     data = get_data_from_file(filename)
 
-    k = [i for i in range(3, 6) if i % 2 == 1]
+    k = [i for i in range(3, 8) if i % 2 == 1]
     parameters = {"n_neighbors": k,
-                  "p": [1, 2]}
+                  "weights": ["uniform", "distance"]}
     kn = KNeighborsClassifier(n_jobs=-1, metric="minkowski")
 
-    clf = GridSearchCV(kn, parameters, cv=5, verbose=3)
+    clf = GridSearchCV(kn, parameters, cv=cv, verbose=3)
     clf.fit(data["x"], data["y"])
 
     y1 = []
     y2 = []
-    print(clf.cv_results_["param_p"])
     print(clf.cv_results_["mean_test_score"])
-
     for i, val in enumerate(clf.cv_results_["mean_test_score"]):
-        if clf.cv_results_["param_p"][i] == 1:
+        if clf.cv_results_["param_weights"][i] == "uniform":
             y1.append(val)
         else:
             y2.append(val)
@@ -47,4 +45,4 @@ def create_graphs(x, y1, y2, x_label, y1_label, y2_label):
 
 if __name__ == "__main__":
     k, y1, y2 = find_optimal_classifier_params("harddrive1.arff")
-    create_graphs(k, y1, y2, "k", "manhattan", "euclidean")
+    create_graphs(k, y1, y2, "k", "uniform", "distance")
