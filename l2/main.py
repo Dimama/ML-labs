@@ -1,4 +1,4 @@
-from clustering import k_means, agglomerative
+from clustering import k_means, agglomerative, compare_silhouettes
 from process_data import get_data_from_file
 
 
@@ -9,5 +9,6 @@ if __name__ == "__main__":
     x = [vec[5:] for vec in data]  # only Q1-Q28
     k_means(x)
     agglomerative(x)
+    compare_silhouettes(x)
 
 
