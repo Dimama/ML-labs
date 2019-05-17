@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 from sklearn.neural_network import MLPClassifier
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.preprocessing import normalize, StandardScaler
 
@@ -41,10 +41,28 @@ if __name__ == "__main__":
     x_train = scaler.transform(x_train)
     x_test = scaler.transform(x_test)
 
-    classifier = MLPClassifier(solver="lbfgs", alpha=1e-5, random_state=1)
+    classifier = MLPClassifier(early_stopping=True)
+
+    parameter_space = {
+        #'hidden_layer_sizes': [(50, 50, 50), (50, 100, 50), (100,)],
+        #'activation': ['tanh', 'relu'],
+        'solver': ['sgd', 'adam'],
+        'alpha': [0.0001, 0.001, 0.05],
+        'learning_rate': ['constant', 'adaptive'],
+    }
+
+    clf = GridSearchCV(classifier, parameter_space, n_jobs=-1, cv=3, verbose=3)
+    clf.fit(x_train, y_train)
     classifier.fit(x_train, y_train)
 
-    predicted = classifier.predict(x_test)
+    print('Best parameters found:\n', clf.best_params_)
+
+    means = clf.cv_results_['mean_test_score']
+    stds = clf.cv_results_['std_test_score']
+    for mean, std, params in zip(means, stds, clf.cv_results_['params']):
+        print("%0.3f (+/-%0.03f) for %r" % (mean, std * 2, params))
+
+    predicted = clf.predict(x_test)
     print("Accuracy test:", accuracy_score(y_test, predicted))
 
     print("Classification report:\n", classification_report(y_test,
