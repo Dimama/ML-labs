@@ -27,27 +27,15 @@ def get_harddrive_data_from_file(filename):
     return data
 
 
-if __name__ == "__main__":
-
-    filename = "../l1/harddrive1.arff"
-    data = get_harddrive_data_from_file(filename)
-
-    x = np.array(normalize(data["x"]))
-    y = np.array(data["y"])
-
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=42)
-    scaler = StandardScaler()
-    scaler.fit(x_train)
-    x_train = scaler.transform(x_train)
-    x_test = scaler.transform(x_test)
-
-    classifier = MLPClassifier(early_stopping=True)
+def search_otpimal_hyperparams(x_train, y_train):
+    classifier = MLPClassifier(early_stopping=True, alpha=1e-5, solver='adam', learning_rate='adaptive', activation='tanh')
 
     parameter_space = {
-        #'hidden_layer_sizes': [(50, 50, 50), (50, 100, 50), (100,)],
-        #'activation': ['tanh', 'relu'],
+        # 'hidden_layer_sizes': [(100, 100, 100), (80, 80, 80), (90, 90, 90)],
+        'hidden_layer_sizes': [(100, 100, 100), (100, 100,), (100,)],
+        'activation': ['tanh', 'relu', 'logistic'],
         'solver': ['sgd', 'adam'],
-        'alpha': [0.0001, 0.001, 0.05],
+        'alpha': [0.0001, 0.001, 0.005],
         'learning_rate': ['constant', 'adaptive'],
     }
 
@@ -62,7 +50,35 @@ if __name__ == "__main__":
     for mean, std, params in zip(means, stds, clf.cv_results_['params']):
         print("%0.3f (+/-%0.03f) for %r" % (mean, std * 2, params))
 
-    predicted = clf.predict(x_test)
+
+if __name__ == "__main__":
+
+    filename = "../l1/harddrive1.arff"
+    data = get_harddrive_data_from_file(filename)
+
+    x = np.array(normalize(data["x"]))
+    y = np.array(data["y"])
+
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=42)
+    scaler = StandardScaler()
+    scaler.fit(x_train)
+    x_train = scaler.transform(x_train)
+    x_test = scaler.transform(x_test)
+
+    #search_otpimal_hyperparams(x_train, y_train)
+    classifier = MLPClassifier(early_stopping=True,
+                               alpha=1e-5,
+                               solver='adam',
+                               learning_rate='adaptive',
+                               activation='tanh',
+                               hidden_layer_sizes=(90, 90, 90),
+                               verbose=3)
+
+    classifier.fit(x_train, y_train)
+    print("Loss:", classifier.loss_)
+    print("iterations:", classifier.n_iter_)
+
+    predicted = classifier.predict(x_test)
     print("Accuracy test:", accuracy_score(y_test, predicted))
 
     print("Classification report:\n", classification_report(y_test,
